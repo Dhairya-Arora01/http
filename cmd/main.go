@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
+
+	"github.com/Dhairya-Arora01/http"
+	"github.com/Dhairya-Arora01/http/pkg/log"
 )
 
 var helloHTML = `<html>
@@ -17,30 +19,40 @@ var helloHTML = `<html>
 </html>`
 
 func main() {
-	listener, err := net.Listen("tcp", ":8080")
+	// listener, err := net.Listen("tcp", ":8080")
+	// if err != nil {
+	// 	log.Fatalf("failed to bind to port 8080: %s", err.Error())
+	// }
+
+	// defer listener.Close()
+
+	// addr := listener.Addr()
+	// fmt.Printf("Listening on address %s\n", addr.String())
+
+	// for {
+	// 	conn, err := listener.Accept()
+	// 	if err != nil {
+	// 		fmt.Printf("Failed to accept connection: %s\n", err.Error())
+	// 		continue
+	// 	}
+
+	// 	if err := handleConnection(conn); err != nil {
+	// 		fmt.Printf("Failed to handle connection: %s\n", err.Error())
+	// 		conn.Close()
+	// 		continue
+	// 	}
+
+	// 	conn.Close()
+	// }
+
+	logger, err := log.New(log.DebugLevel)
 	if err != nil {
-		log.Fatalf("failed to bind to port 8080: %s", err.Error())
+		fmt.Printf("failed to initialize logger: %v\n", err)
+		return
 	}
 
-	defer listener.Close()
-
-	addr := listener.Addr()
-	fmt.Printf("Listening on address %s\n", addr.String())
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Printf("Failed to accept connection: %s\n", err.Error())
-			continue
-		}
-
-		if err := handleConnection(conn); err != nil {
-			fmt.Printf("Failed to handle connection: %s\n", err.Error())
-			conn.Close()
-			continue
-		}
-
-		conn.Close()
+	if err := http.Start(logger, 8080); err != nil {
+		fmt.Printf("encountered an error while listening: %v\n", err)
 	}
 }
 
