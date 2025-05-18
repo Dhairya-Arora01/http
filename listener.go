@@ -2,6 +2,7 @@
 package http
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 
@@ -28,7 +29,39 @@ func Start(log logr.Logger, p int) error {
 		}
 
 		// TODO: handle the request.
-
-		conn.Close()
+		if err := handleConnection(conn); err != nil {
+			log.Error(err, "Failed to handle connection")
+		}
 	}
+}
+
+func handleConnection(conn net.Conn) error {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	// Read start-line for the request.
+	// <method> <request-target> <protocol>.
+	startLine, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("invalid request: without start line of the form '<method> <request-target> - <protocol>': %w", err)
+	}
+
+	fmt.Println("startLine", startLine)
+
+	// Read headers.
+	for {
+		header, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("invalid request: failed to read headers: %w", err)
+		}
+
+		if header == "\r\n" {
+			break
+		}
+
+		fmt.Println("header", header)
+	}
+
+	return nil
 }
