@@ -4,7 +4,13 @@ package header
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
+)
+
+const (
+	contentLengthKey = "content-length"
 )
 
 // Header represents an HTTP header.
@@ -12,6 +18,21 @@ import (
 type Header struct {
 	Key   string // Key is a case-insensitive string.
 	Value string
+}
+
+// ContentLength checks if the specified header is a "Content-Length" header.
+// If it is, it returns the specified value of content-length.
+func (h *Header) ContentLength() (isContentLength bool, length int, err error) {
+	if h.Key != contentLengthKey {
+		return false, 0, nil
+	}
+
+	length, err = strconv.Atoi(h.Value)
+	if err != nil {
+		return true, 0, fmt.Errorf("connot parse the content-length into type int: %w", err)
+	}
+
+	return true, length, nil
 }
 
 // FromString constructs a Header from a line in the request/response metadata.

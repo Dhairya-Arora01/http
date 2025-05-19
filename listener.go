@@ -2,11 +2,12 @@
 package http
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/Dhairya-Arora01/http/pkg/port"
+	"github.com/Dhairya-Arora01/http/pkg/request"
 	"github.com/go-logr/logr"
 )
 
@@ -38,30 +39,17 @@ func Start(log logr.Logger, p int) error {
 func handleConnection(conn net.Conn) error {
 	defer conn.Close()
 
-	reader := bufio.NewReader(conn)
-
-	// Read start-line for the request.
-	// <method> <request-target> <protocol>.
-	startLine, err := reader.ReadString('\n')
+	req, err := request.New(conn)
 	if err != nil {
-		return fmt.Errorf("invalid request: without start line of the form '<method> <request-target> - <protocol>': %w", err)
+		return fmt.Errorf("invalid request: %w", err)
 	}
 
-	fmt.Println("startLine", startLine)
-
-	// Read headers.
-	for {
-		header, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("invalid request: failed to read headers: %w", err)
-		}
-
-		if header == "\r\n" {
-			break
-		}
-
-		fmt.Println("header", header)
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read request body: %w", err)
 	}
+
+	fmt.Println("body:", string(body))
 
 	return nil
 }
