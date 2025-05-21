@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strings"
 
 	"github.com/Dhairya-Arora01/http/pkg/header"
@@ -15,7 +16,7 @@ import (
 // Request represents an HTTP request.
 type Request struct {
 	Method  method.Method
-	URL     string
+	URL     *url.URL
 	Headers []*header.Header
 	Body    io.Reader
 }
@@ -31,9 +32,14 @@ func New(conn net.Conn) (*Request, error) {
 		return nil, fmt.Errorf("no start-line of the form <method> <request-target> <protocol>: %w", err)
 	}
 
-	verb, url, _, err := extractRequestLineParam(startLine)
+	verb, rawURL, _, err := extractRequestLineParam(startLine)
 	if err != nil {
 		return nil, fmt.Errorf("invalid start-line: %w", err)
+	}
+
+	reqURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
 	}
 
 	var (
@@ -72,7 +78,7 @@ func New(conn net.Conn) (*Request, error) {
 
 	return &Request{
 		Method:  verb,
-		URL:     url,
+		URL:     reqURL,
 		Headers: headers,
 		Body:    io.LimitReader(reader, int64(contentLength)),
 	}, nil

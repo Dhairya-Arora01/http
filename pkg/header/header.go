@@ -17,7 +17,7 @@ const (
 // An HTTP header is a key value pair that conveys request/response metadata.
 type Header struct {
 	Key   string // Key is a case-insensitive string.
-	Value string
+	Value []string
 }
 
 // ContentLength checks if the specified header is a "Content-Length" header.
@@ -27,7 +27,7 @@ func (h *Header) ContentLength() (isContentLength bool, length int, err error) {
 		return false, 0, nil
 	}
 
-	length, err = strconv.Atoi(h.Value)
+	length, err = strconv.Atoi(h.Value[0])
 	if err != nil {
 		return true, 0, fmt.Errorf("connot parse the content-length into type int: %w", err)
 	}
@@ -42,8 +42,14 @@ func FromString(headerLine string) (*Header, error) {
 		return nil, errors.New("malformed header-line")
 	}
 
+	// for multiple values in single header line, split the values on "," and remove whitespaces.
+	valSlice := strings.Split(keyVal[1], ",")
+	for i := range valSlice {
+		valSlice[i] = strings.TrimSpace(valSlice[i])
+	}
+
 	return &Header{
 		Key:   strings.ToLower(keyVal[0]), // the key is case insensitive, so make it lower case.
-		Value: strings.TrimSpace(keyVal[1]),
+		Value: valSlice,
 	}, nil
 }
