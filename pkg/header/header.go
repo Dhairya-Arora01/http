@@ -10,7 +10,14 @@ import (
 )
 
 const (
-	contentLengthKey = "content-length"
+	// DateHeaderName represents the name of Date header.
+	DateHeaderName = "Date"
+
+	// ContentTypeHeaderName represents the name of content-type header.
+	ContentTypeHeaderName = "content-type"
+
+	// ContentLengthHeaderName represents the name of content-length header.
+	ContentLengthHeaderName = "content-length"
 )
 
 // Header represents an HTTP header.
@@ -23,7 +30,7 @@ type Header struct {
 // ContentLength checks if the specified header is a "Content-Length" header.
 // If it is, it returns the specified value of content-length.
 func (h *Header) ContentLength() (isContentLength bool, length int, err error) {
-	if h.Key != contentLengthKey {
+	if h.Key != ContentLengthHeaderName {
 		return false, 0, nil
 	}
 
@@ -52,4 +59,12 @@ func FromString(headerLine string) (*Header, error) {
 		Key:   strings.ToLower(keyVal[0]), // the key is case insensitive, so make it lower case.
 		Value: valSlice,
 	}, nil
+}
+
+// New returns a new Header.
+func New(key, value string) *Header {
+	return &Header{
+		Key:   key,
+		Value: []string{value},
+	}
 }

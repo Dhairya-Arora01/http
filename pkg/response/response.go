@@ -1,9 +1,11 @@
 package response
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/Dhairya-Arora01/http/pkg/header"
@@ -16,9 +18,6 @@ const (
 
 	// TimeFormat represents the time format accepted by the HTTP protocol.
 	TimeFormat = "Mon, 02 Jan 2006 15:04:05 GMT"
-
-	// DateHeaderName represents the name of Date header.
-	DateHeaderName = "Date"
 )
 
 // Request represents an HTTP request.
@@ -29,17 +28,13 @@ type Response struct {
 }
 
 // New returns a new Response object.
-func New(status status.Status, headers []*header.Header, body io.Reader) *Response {
+func New(status status.Status, contentType ContentType, headers []*header.Header, body io.Reader) *Response {
 	responseHeaders := []*header.Header{}
 
-	dateHeader := &header.Header{
-		Key: DateHeaderName,
-		Value: []string{
-			time.Now().UTC().Format(TimeFormat),
-		},
-	}
+	dateHeader := header.New(header.DateHeaderName, time.Now().UTC().Format(TimeFormat))
+	contentTypeHeader := header.New(header.ContentTypeHeaderName, contentType.String())
 
-	responseHeaders = append(responseHeaders, dateHeader)
+	responseHeaders = append(responseHeaders, dateHeader, contentTypeHeader)
 	responseHeaders = append(responseHeaders, headers...)
 
 	return &Response{
@@ -51,6 +46,22 @@ func New(status status.Status, headers []*header.Header, body io.Reader) *Respon
 
 // Write writes the response to the request.
 func (r *Response) Write(conn net.Conn) error {
+	var (
+		buf           bytes.Buffer
+		contentLength int64
+		err           error
+	)
+
+	if r.Body != nil {
+		contentLength, err = buf.ReadFrom(r.Body)
+		if err != nil {
+			contentLength = 0
+		}
+	}
+
+	contentLengthHeader := header.New(header.ContentLengthHeaderName, strconv.FormatInt(contentLength, 10))
+	r.Headers = append(r.Headers, contentLengthHeader)
+
 	startLine := fmt.Sprintf("%s %d %s\r\n", HTTPProtocol, r.Status.Code, r.Status.Text)
 
 	var headers string
@@ -67,19 +78,7 @@ func (r *Response) Write(conn net.Conn) error {
 		headers += fmt.Sprintf("%s: %s\r\n", header.Key, headerValue)
 	}
 
-	var (
-		body []byte
-		err  error
-	)
-
-	if r.Body != nil {
-		body, err = io.ReadAll(r.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
-		}
-	}
-
-	res := startLine + headers + "\r\n" + string(body)
+	res := startLine + headers + "\r\n" + string(buf.Bytes())
 	if _, err = conn.Write([]byte(res)); err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}

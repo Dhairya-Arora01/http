@@ -4,6 +4,7 @@ package http
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/Dhairya-Arora01/http/pkg/port"
 	"github.com/Dhairya-Arora01/http/pkg/request"
@@ -29,14 +30,16 @@ func Start(log logr.Logger, p int, pathRouter *router.Router) error {
 			continue
 		}
 
-		if err := handleConnection(conn, pathRouter); err != nil {
+		if err := handleConnection(conn, pathRouter, log); err != nil {
 			log.Error(err, "Failed to handle connection")
 		}
 	}
 }
 
-func handleConnection(conn net.Conn, pathRouter *router.Router) error {
+func handleConnection(conn net.Conn, pathRouter *router.Router, log logr.Logger) error {
 	defer conn.Close()
+
+	start := time.Now()
 
 	req, err := request.New(conn)
 	if err != nil {
@@ -47,6 +50,10 @@ func handleConnection(conn net.Conn, pathRouter *router.Router) error {
 	if err := res.Write(conn); err != nil {
 		return fmt.Errorf("failed to write response to the http connection: %w", err)
 	}
+
+	duration := time.Since(start)
+
+	log.Info("handled request", "path", req.URL.Path, "status", res.Status.Code, "time", duration)
 
 	return nil
 }
